@@ -7,7 +7,7 @@ import java.util.Set;
 public class ThemeConfig {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.AUTO)
+//    @GeneratedValue(strategy = GenerationType.AUTO)
     private Long id;
 
     @Column

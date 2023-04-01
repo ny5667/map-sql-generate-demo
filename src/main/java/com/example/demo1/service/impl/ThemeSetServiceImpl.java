@@ -1,12 +1,11 @@
 package com.example.demo1.service.impl;
 
-import com.example.demo1.persistence.model.ThemeSet;
-import com.example.demo1.persistence.model.ThemeSetItem;
+import com.example.demo1.dao.ThemeSetDao;
+import com.example.demo1.dto.ThemeSetDto;
 import com.example.demo1.persistence.repo.ThemeSetItemRepository;
 import com.example.demo1.persistence.repo.ThemeSetRepository;
 import com.example.demo1.service.ThemeSetService;
 import com.example.demo1.vo.*;
-import com.example.demo1.web.exception.BookNotFoundException;
 import gudusoft.gsqlparser.EDbVendor;
 import gudusoft.gsqlparser.TGSqlParser;
 import gudusoft.gsqlparser.nodes.TMultiTarget;
@@ -17,13 +16,13 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.FileSystemResource;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.util.Assert;
 import org.springframework.util.StreamUtils;
 
 import javax.servlet.http.HttpServletResponse;
 import java.io.*;
-import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -64,9 +63,17 @@ public class ThemeSetServiceImpl implements ThemeSetService {
     private static final String ROW_EXPR = "\n";
 
     /**
+     * sql结尾的;符号
+     */
+    private static final String SQL_COMMA = ";";
+
+    /**
      * 插入关键字
      */
     private static final String INSERT = "insert";
+
+    @Autowired
+    private JdbcTemplate jdbcTemplate;
 
 
     /*
@@ -98,25 +105,31 @@ TIMESTAMP'2021-12-12 16:58:36.277'
     @Autowired
     private ThemeSetItemRepository themeSetItemRepository;
 
+    @Autowired
+    ThemeSetDao themeSetDao;
+
     @Override
     public ThemeSetBO getBOById(Long id) throws IOException {
-        List<ThemeSetItem> byThemeSetId = themeSetItemRepository.findByThemeSetId(id);
-        String themeIds_s = byThemeSetId.stream().map(v -> v.getThemeId().getId().toString()).collect(Collectors.joining(","));
-        String customIds_s = byThemeSetId.stream()
-                .map(v -> v.getThemeId().getCustomThematics().stream().map(k -> k.getId().toString()).collect(Collectors.toList()))
-                .flatMap(List::stream).distinct().collect(Collectors.joining(","));
-
+        String themeIds_s = themeSetDao.findThemeIdsById(id).stream().map(Object::toString).collect(Collectors.joining(","));
+        String customIds_s = themeSetDao.findCustomIds(id).stream().map(Object::toString).collect(Collectors.joining(","));
         String init_s = getString(INIT_SQLSERVER_THEME_FILE_PATH);
         String delete_s = getString(DELETE_SQLSERVER_THEME_FILE_PATH);
         init_s = getString(init_s, themeIds_s, customIds_s);
         delete_s = getString(delete_s, themeIds_s, customIds_s);
-        return new ThemeSetBO(themeIds_s, customIds_s, init_s, delete_s);
+        String tableInsertString = getTableInsertString();
+        return new ThemeSetBO(themeIds_s, customIds_s, init_s, delete_s, tableInsertString);
+    }
+
+    @Override
+    public ThemeSetBO getBOByIdAndInit(Long id) throws IOException {
+        ThemeSetBO boById = getBOById(id);
+        executeSql(boById.getInit());
+        return boById;
     }
 
     @Override
     public void handleSet(HttpServletResponse response, SetPostVO vo) throws IOException {
-        ThemeSet themeSet = themeSetRepository.findById(vo.getId())
-                .orElseThrow(BookNotFoundException::new);
+        ThemeSetDto themeSetDto = themeSetDao.findById(vo.getId());
 
         String insertText = vo.getInsertText();
         List<String> lines = matchInsertSql(insertText);
@@ -147,20 +160,21 @@ TIMESTAMP'2021-12-12 16:58:36.277'
             String fileContent = vo.getDeleteText() + ROW_EXPR + saveText_d + ROW_EXPR + saveText_i;
             saveSQLFile(fileContent, customDir, saveType, listOfFileNames);
         }
-        downloadZipFile(response, listOfFileNames, themeSet);
+        downloadZipFile(response, listOfFileNames, themeSetDto);
     }
 
     /*--------------------------------------------------------------------公共方法------------------------------------------------------------------------------*/
 
     /**
      * 下载压缩包
-     * @param response 接口返回
+     *
+     * @param response        接口返回
      * @param listOfFileNames 下载的文件
-     * @param themeSet 导出的集合名称
+     * @param themeSetDto     导出的集合名称
      */
-    public void downloadZipFile(HttpServletResponse response, List<String> listOfFileNames, ThemeSet themeSet) {
+    public void downloadZipFile(HttpServletResponse response, List<String> listOfFileNames, ThemeSetDto themeSetDto) {
         response.setContentType("application/zip");
-        response.setHeader("Content-Disposition", "attachment; filename=" + getDateString() + "_" + themeSet.getName() + "download" + ".zip");
+        response.setHeader("Content-Disposition", "attachment; filename=" + getDateString() + "_" + themeSetDto.getName() + "download" + ".zip");
         try (ZipOutputStream zipOutputStream = new ZipOutputStream(response.getOutputStream())) {
             for (String fileName : listOfFileNames) {
                 FileSystemResource fileSystemResource = new FileSystemResource(fileName);
@@ -582,5 +596,111 @@ TIMESTAMP'2021-12-12 16:58:36.277'
         return resultStringBuilder.toString();
     }
 
+    /**
+     * 创建视图
+     *
+     * @param init_s
+     */
+    private void executeSql(String init_s) {
+        String[] split = init_s.split("\n");
+        String newsql = "";
+        for (String sqlLine :
+                split) {
+            newsql += sqlLine;
+            if (!endWithSqlComma(sqlLine)) {
+                continue;
+            }
+            try {
+                jdbcTemplate.execute(newsql);
+            } catch (Exception e) {
+                logger.error(e.getMessage(), e);
+            }
+        }
+    }
+
+    /**
+     * 该行是否为;结尾
+     *
+     * @param sqlLine sql文件中一行文本
+     * @return
+     */
+    private Boolean endWithSqlComma(String sqlLine) {
+        String newSql = sqlLine;
+        while (newSql != null && !newSql.isEmpty()) {
+            String substring = newSql.substring(newSql.length() - 1);
+            if (substring.trim().isEmpty()) {
+                newSql = newSql.substring(newSql.length() - 1);
+            } else if (SQL_COMMA.equals(substring)) {
+                return true;
+            } else {
+                return false;
+            }
+        }
+        return false;
+    }
+
+    private String getTableInsertString() {
+//        String url = "jdbc:sqlserver://localhost;databaseName=mydb";
+//        String user = "username";
+//        String password = "password";
+        String[] viewNames = {"BB_%", "CC_%"};
+
+//        DriverManagerDataSource dataSource = new DriverManagerDataSource(url, user, password);
+//        JdbcTemplate jdbcTemplate = new JdbcTemplate(dataSource);
+
+        StringBuilder sb = new StringBuilder();
+        for (String viewName : viewNames) {
+            List<Map<String, Object>> rows = jdbcTemplate.queryForList("SELECT * FROM " + viewName);
+            for (Map<String, Object> row : rows) {
+                String tableName = row.getOrDefault("TABLE_NAME", "").toString();
+                if (!tableName.isEmpty()) {
+                    sb.append("INSERT INTO ").append(tableName).append("(");
+
+                    int i = 0;
+                    for (String columnName : row.keySet()) {
+                        sb.append(columnName);
+
+                        if (++i < row.size()) {
+                            sb.append(",");
+                        }
+                    }
+
+                    sb.append(") VALUES(");
+
+                    i = 0;
+                    for (Object value : row.values()) {
+                        sb.append(formatValue(value));
+
+                        if (++i < row.size()) {
+                            sb.append(",");
+                        }
+                    }
+
+                    sb.append(");\n");
+                }
+            }
+        }
+
+        String outputString = sb.toString();
+        System.out.println(outputString);
+        return outputString;
+    }
+
+    /**
+     * 转为string
+     *
+     * @param value
+     * @return
+     */
+    private static String formatValue(Object value) {
+        if (value == null) {
+            return "NULL";
+        } else if (value instanceof String || value instanceof java.sql.Date
+                || value instanceof java.sql.Time || value instanceof java.sql.Timestamp) {
+            return "'" + value.toString().replace("'", "''") + "'";
+        } else {
+            return value.toString();
+        }
+    }
 
 }

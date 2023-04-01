@@ -24,7 +24,6 @@
         <th scope="col">#</th>
         <th scope="col" data-field="id">Id</th>
         <th scope="col" data-field="name">Name</th>
-        <th scope="col" data-field="valid">Valid</th>
         <th scope="col">Operate</th>
     </tr>
     </thead>
@@ -34,7 +33,6 @@
         <th scope="row" th:text="${setStat.count}">1</th>
         <td th:text="${set.id}" />
         <td th:text="${set.name}" />
-        <td th:text="${set.valid} ? ${true} : ${false}" />
         <td><a th:href="@{/edit/{id}(id=${set.id})}">edit</a></td>
     </tr>
     </tbody>

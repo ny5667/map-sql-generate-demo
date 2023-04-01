@@ -6,7 +6,7 @@ import javax.persistence.*;
 public class ThemeSetItem {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.AUTO)
+//    @GeneratedValue(strategy = GenerationType.AUTO)
     private Long id;
 
     @OneToOne(cascade = CascadeType.ALL)

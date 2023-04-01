@@ -17,6 +17,14 @@ public interface ThemeSetService {
     ThemeSetBO getBOById(Long id) throws IOException;
 
     /**
+     * 根据语句id获取对应数据，并初始化
+     * @param id
+     * @return
+     * @throws IOException
+     */
+    ThemeSetBO getBOByIdAndInit(Long id) throws IOException;
+
+    /**
      * 生成自定义专题图更新语句
      * @param response
      * @param vo

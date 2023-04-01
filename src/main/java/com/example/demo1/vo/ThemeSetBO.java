@@ -22,11 +22,17 @@ public class ThemeSetBO {
      */
     private String delete;
 
-    public ThemeSetBO(String themeIds, String customIds, String init, String delete) {
+    /**
+     * 数据库中插入的脚本
+     */
+    private String insertText;
+
+    public ThemeSetBO(String themeIds, String customIds, String init, String delete,String insertText) {
         this.themeIds = themeIds;
         this.customIds = customIds;
         this.init = init;
         this.delete = delete;
+        this.insertText = insertText;
     }
 
     public String getThemeIds() {
@@ -59,5 +65,13 @@ public class ThemeSetBO {
 
     public void setDelete(String delete) {
         this.delete = delete;
+    }
+
+    public String getInsertText() {
+        return insertText;
+    }
+
+    public void setInsertText(String insertText) {
+        this.insertText = insertText;
     }
 }
