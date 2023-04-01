@@ -2,8 +2,6 @@ package com.example.demo1.service.impl;
 
 import com.example.demo1.dao.ThemeSetDao;
 import com.example.demo1.dto.ThemeSetDto;
-import com.example.demo1.persistence.repo.ThemeSetItemRepository;
-import com.example.demo1.persistence.repo.ThemeSetRepository;
 import com.example.demo1.service.ThemeSetService;
 import com.example.demo1.vo.*;
 import gudusoft.gsqlparser.EDbVendor;
@@ -98,12 +96,6 @@ TIMESTAMP'2021-12-12 16:58:36.277'
             "getDate\\(\\)",
             "NOW\\(\\)"
     );
-
-    @Autowired
-    private ThemeSetRepository themeSetRepository;
-
-    @Autowired
-    private ThemeSetItemRepository themeSetItemRepository;
 
     @Autowired
     ThemeSetDao themeSetDao;

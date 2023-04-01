@@ -2,14 +2,11 @@ package com.example.demo1.web;
 
 import com.example.demo1.dao.ThemeSetDao;
 import com.example.demo1.dto.ThemeSetDto;
-import com.example.demo1.persistence.repo.MainLayerCustomRepository;
-import com.example.demo1.persistence.repo.ThemeSetItemRepository;
 import com.example.demo1.service.ThemeSetService;
 import com.example.demo1.vo.ThemeSetBO;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -29,13 +26,6 @@ public class ThemeSetPageController {
 
     @Autowired
     ThemeSetDao themeSetDao;
-
-    @Autowired
-    private ThemeSetItemRepository themeSetItemRepository;
-
-    @Autowired
-    private MainLayerCustomRepository mainLayerCustomRepository;
-
 
     @GetMapping("/list")
     public String listPage(Model model) {
@@ -57,8 +47,6 @@ public class ThemeSetPageController {
     }
 
     /*--------------------------------------------------------------------公共方法------------------------------------------------------------------------------*/
-
-
 
 
 }
