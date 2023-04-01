@@ -15,4 +15,10 @@ public class SimpleController {
         model.addAttribute("appName", appName);
         return "home";
     }
+
+    @GetMapping("/demo")
+    public String demoPage(Model model) {
+        return "demo";
+    }
+
 }
