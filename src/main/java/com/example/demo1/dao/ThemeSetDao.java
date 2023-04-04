@@ -50,6 +50,16 @@ public class ThemeSetDao {
     }
 
     /**
+     * 获取关联的主题图名称集合
+     * @param id
+     * @return
+     */
+    public List<String> findThemeNamesById(Long id){
+        Map<String, Long> id1 = Collections.singletonMap("id", id);
+        return namedParameterJdbcTemplate.queryForList(Constants.SQL_FIND_THEME_NAMES_BY_ID, id1, String.class);
+    }
+
+    /**
      * 获取关联的自定义专题图id集合
      * @param id
      * @return 自定义专题图id列表

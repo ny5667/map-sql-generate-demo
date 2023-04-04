@@ -8,6 +8,11 @@ public class ThemeSetBO {
     private String themeIds;
 
     /**
+     * 主题图名称集合
+     */
+    private String themeNames;
+
+    /**
      * 专题图创建表语句
      */
     private String customIds;
@@ -27,8 +32,9 @@ public class ThemeSetBO {
      */
     private String insertText;
 
-    public ThemeSetBO(String themeIds, String customIds, String init, String delete,String insertText) {
+    public ThemeSetBO(String themeIds,String themeNames, String customIds, String init, String delete,String insertText) {
         this.themeIds = themeIds;
+        this.themeNames = themeNames;
         this.customIds = customIds;
         this.init = init;
         this.delete = delete;
@@ -41,6 +47,14 @@ public class ThemeSetBO {
 
     public void setThemeIds(String themeIds) {
         this.themeIds = themeIds;
+    }
+
+    public String getThemeNames() {
+        return themeNames;
+    }
+
+    public void setThemeNames(String themeNames) {
+        this.themeNames = themeNames;
     }
 
     public String getCustomIds() {

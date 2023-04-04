@@ -27,14 +27,14 @@ public class ThemeSetPageController {
     @Autowired
     ThemeSetDao themeSetDao;
 
-    @GetMapping("/list")
+    @GetMapping("/theme/list")
     public String listPage(Model model) {
         List<ThemeSetDto> all = themeSetDao.findAll();
         model.addAttribute("sets", all);
-        return "set/list";
+        return "theme/list";
     }
 
-    @GetMapping("/edit/{id}")
+    @GetMapping("/theme/edit/{id}")
     public String EditPage(Model model, @PathVariable Long id) throws IOException {
         ThemeSetBO boById = themeSetService.getBOByIdAndInit(id);
         model.addAttribute("themeIds", boById.getThemeIds());
@@ -43,7 +43,7 @@ public class ThemeSetPageController {
         model.addAttribute("insertText", boById.getInsertText());
         model.addAttribute("deleteText", boById.getDelete());
         model.addAttribute("id", id);
-        return "set/edit";
+        return "theme/edit";
     }
 
     /*--------------------------------------------------------------------公共方法------------------------------------------------------------------------------*/

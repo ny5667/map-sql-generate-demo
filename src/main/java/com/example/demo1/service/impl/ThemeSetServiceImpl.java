@@ -3,6 +3,7 @@ package com.example.demo1.service.impl;
 import com.example.demo1.dao.ThemeSetDao;
 import com.example.demo1.dto.ThemeSetDto;
 import com.example.demo1.service.ThemeSetService;
+import com.example.demo1.util.Constants;
 import com.example.demo1.vo.*;
 import gudusoft.gsqlparser.EDbVendor;
 import gudusoft.gsqlparser.TGSqlParser;
@@ -21,6 +22,7 @@ import org.springframework.util.StreamUtils;
 
 import javax.servlet.http.HttpServletResponse;
 import java.io.*;
+import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -103,13 +105,16 @@ TIMESTAMP'2021-12-12 16:58:36.277'
     @Override
     public ThemeSetBO getBOById(Long id) throws IOException {
         String themeIds_s = themeSetDao.findThemeIdsById(id).stream().map(Object::toString).collect(Collectors.joining(","));
+        Assert.hasLength(themeIds_s,"主题图id为空");
+        String themeNames_s = String.join(",", themeSetDao.findThemeNamesById(id));
         String customIds_s = themeSetDao.findCustomIds(id).stream().map(Object::toString).collect(Collectors.joining(","));
+        Assert.hasLength(customIds_s,"自定义专题图id为空");
         String init_s = getString(INIT_SQLSERVER_THEME_FILE_PATH);
         String delete_s = getString(DELETE_SQLSERVER_THEME_FILE_PATH);
         init_s = getString(init_s, themeIds_s, customIds_s);
         delete_s = getString(delete_s, themeIds_s, customIds_s);
         String tableInsertString = getTableInsertString();
-        return new ThemeSetBO(themeIds_s, customIds_s, init_s, delete_s, tableInsertString);
+        return new ThemeSetBO(themeIds_s, themeNames_s, customIds_s, init_s, delete_s, tableInsertString);
     }
 
     @Override
@@ -121,6 +126,7 @@ TIMESTAMP'2021-12-12 16:58:36.277'
 
     @Override
     public void handleSet(HttpServletResponse response, SetPostVO vo) throws IOException {
+        ThemeSetBO boById = getBOById(vo.getId());
         ThemeSetDto themeSetDto = themeSetDao.findById(vo.getId());
 
         String insertText = vo.getInsertText();
@@ -142,7 +148,9 @@ TIMESTAMP'2021-12-12 16:58:36.277'
                 String rowText = lines.get(i);
                 RowBO rowBO = map.get(rowText);
                 newDeletes.add(getNewDeleteSql(rowBO));
-                setInsertValue(saveType, rowBO, i, adminInfo);
+                for (int c = 0; c < rowBO.getColumns().size(); c++) {
+                    setInsertValue(saveType, rowBO, c, adminInfo);
+                }
                 String insertSql = getInsertSql(rowBO);
                 newInserts.add(insertSql);
             }
@@ -152,6 +160,8 @@ TIMESTAMP'2021-12-12 16:58:36.277'
             String fileContent = vo.getDeleteText() + ROW_EXPR + saveText_d + ROW_EXPR + saveText_i;
             saveSQLFile(fileContent, customDir, saveType, listOfFileNames);
         }
+
+
         downloadZipFile(response, listOfFileNames, themeSetDto);
     }
 
@@ -165,11 +175,24 @@ TIMESTAMP'2021-12-12 16:58:36.277'
      * @param themeSetDto     导出的集合名称
      */
     public void downloadZipFile(HttpServletResponse response, List<String> listOfFileNames, ThemeSetDto themeSetDto) {
+//        String filename = "download11111" + getDateString() + "-" + themeSetDto.getName() + ".zip";
+        String filename = "" + getDateString() + "-" + themeSetDto.getName() + "-更新新包的增量.zip";
+        System.out.println(filename);
         response.setContentType("application/zip");
-        response.setHeader("Content-Disposition", "attachment; filename=" + getDateString() + "_" + themeSetDto.getName() + "download" + ".zip");
-        try (ZipOutputStream zipOutputStream = new ZipOutputStream(response.getOutputStream())) {
+//        response.setHeader("Content-Disposition", "attachment; filename=" + filename);
+        try {
+            response.setHeader("Content-Disposition", "attachment;filename*=UTF-8''" + URLEncoder.encode(filename, "UTF-8"));
+        } catch (UnsupportedEncodingException e) {
+            throw new RuntimeException(e);
+        }
+//        response.setHeader("Content-Disposition", "attachment; filename=download11111" + ".zip");
+        try (ZipOutputStream zipOutputStream = new ZipOutputStream(response.getOutputStream(), StandardCharsets.UTF_8)) {
             for (String fileName : listOfFileNames) {
                 FileSystemResource fileSystemResource = new FileSystemResource(fileName);
+
+//                FileSystemResource resource = new FileSystemResource(fileName);
+//                resource.setCharset(StandardCharsets.UTF_8);
+
                 ZipEntry zipEntry = new ZipEntry(fileSystemResource.getFilename());
                 zipEntry.setSize(fileSystemResource.contentLength());
                 zipEntry.setTime(System.currentTimeMillis());
@@ -182,6 +205,7 @@ TIMESTAMP'2021-12-12 16:58:36.277'
             zipOutputStream.finish();
         } catch (IOException e) {
             logger.error(e.getMessage(), e);
+            throw new RuntimeException(e);
         }
     }
 
@@ -239,7 +263,7 @@ TIMESTAMP'2021-12-12 16:58:36.277'
      */
     private String getDateString() {
         LocalDateTime dateTimeObj = LocalDateTime.now();
-        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd-hhmmss");
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
         String date = dateTimeObj.format(formatter);
         return date;
     }
@@ -602,8 +626,10 @@ TIMESTAMP'2021-12-12 16:58:36.277'
             if (!endWithSqlComma(sqlLine)) {
                 continue;
             }
+            jdbcTemplate.execute(newsql);
+            newsql = "";
             try {
-                jdbcTemplate.execute(newsql);
+
             } catch (Exception e) {
                 logger.error(e.getMessage(), e);
             }
@@ -631,20 +657,21 @@ TIMESTAMP'2021-12-12 16:58:36.277'
         return false;
     }
 
+    /**
+     * 获取主题图和自定义专题图插入的SQL
+     *
+     * @return
+     */
     private String getTableInsertString() {
-//        String url = "jdbc:sqlserver://localhost;databaseName=mydb";
-//        String user = "username";
-//        String password = "password";
-        String[] viewNames = {"BB_%", "CC_%"};
-
-//        DriverManagerDataSource dataSource = new DriverManagerDataSource(url, user, password);
-//        JdbcTemplate jdbcTemplate = new JdbcTemplate(dataSource);
-
+        List<String> bbAndCCViewNames = getBBAndCCViewNames();
         StringBuilder sb = new StringBuilder();
-        for (String viewName : viewNames) {
+        for (String viewName : bbAndCCViewNames) {
+            String querySql = "SELECT * FROM " + viewName;
+            logger.error("querySql:");
+            logger.error(querySql);
             List<Map<String, Object>> rows = jdbcTemplate.queryForList("SELECT * FROM " + viewName);
             for (Map<String, Object> row : rows) {
-                String tableName = row.getOrDefault("TABLE_NAME", "").toString();
+                String tableName = row.getOrDefault("TABLE_NAME", viewName).toString();
                 if (!tableName.isEmpty()) {
                     sb.append("INSERT INTO ").append(tableName).append("(");
 
@@ -674,8 +701,34 @@ TIMESTAMP'2021-12-12 16:58:36.277'
         }
 
         String outputString = sb.toString();
-        System.out.println(outputString);
+        outputString = replaceViewPrefix(outputString);
+//        System.out.println(outputString);
         return outputString;
+    }
+
+    /**
+     * 替换掉数据库前缀
+     *
+     * @param sqltexts 原数据库文本
+     * @return 处理后无前缀的文本
+     */
+    private String replaceViewPrefix(String sqltexts) {
+        //替换掉数据库前缀
+        for (String s :
+                Constants.VIEW_PREFIX_ARRAY) {
+            sqltexts = sqltexts.replace("ADP.dbo." + s, "").replace(s, "");
+        }
+        return sqltexts;
+    }
+
+    /**
+     * 查询数据库中BB_和CC_开头的视图
+     *
+     * @return
+     */
+    public List<String> getBBAndCCViewNames() {
+        String sql = "SELECT name FROM sys.objects WHERE type_desc='VIEW' AND (name LIKE 'BB_%' OR name LIKE 'CC_%')";
+        return jdbcTemplate.queryForList(sql, String.class);
     }
 
     /**
