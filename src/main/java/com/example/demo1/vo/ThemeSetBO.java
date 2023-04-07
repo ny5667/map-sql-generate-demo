@@ -3,6 +3,11 @@ package com.example.demo1.vo;
 public class ThemeSetBO {
 
     /**
+     * 导出集合名称
+     */
+    private String themeSetName;
+
+    /**
      * 主题图创建表语句
      */
     private String themeIds;
@@ -15,7 +20,12 @@ public class ThemeSetBO {
     /**
      * 专题图创建表语句
      */
-    private String customIds;
+    private String customThematicIds;
+
+    /**
+     * 专题图名称
+     */
+    private String customThematicNames;
 
     /**
      * 创建视图语句
@@ -32,13 +42,23 @@ public class ThemeSetBO {
      */
     private String insertText;
 
-    public ThemeSetBO(String themeIds,String themeNames, String customIds, String init, String delete,String insertText) {
+    public ThemeSetBO(String themeSetName,String themeIds,String themeNames, String customIds,String customThematicNames, String init, String delete,String insertText) {
+        this.themeSetName = themeSetName;
         this.themeIds = themeIds;
         this.themeNames = themeNames;
-        this.customIds = customIds;
+        this.customThematicIds = customIds;
+        this.customThematicNames = customThematicNames;
         this.init = init;
         this.delete = delete;
         this.insertText = insertText;
+    }
+
+    public String getThemeSetName() {
+        return themeSetName;
+    }
+
+    public void setThemeSetName(String themeSetName) {
+        this.themeSetName = themeSetName;
     }
 
     public String getThemeIds() {
@@ -57,12 +77,20 @@ public class ThemeSetBO {
         this.themeNames = themeNames;
     }
 
-    public String getCustomIds() {
-        return customIds;
+    public String getCustomThematicIds() {
+        return customThematicIds;
     }
 
-    public void setCustomIds(String customIds) {
-        this.customIds = customIds;
+    public void setCustomThematicIds(String customThematicIds) {
+        this.customThematicIds = customThematicIds;
+    }
+
+    public String getCustomThematicNames() {
+        return customThematicNames;
+    }
+
+    public void setCustomThematicNames(String customThematicNames) {
+        this.customThematicNames = customThematicNames;
     }
 
     public String getInit() {

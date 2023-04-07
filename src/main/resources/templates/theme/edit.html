@@ -18,17 +18,20 @@
 
   <nav aria-label="breadcrumb">
     <ol class="breadcrumb">
-      <li class="breadcrumb-item"><a href="/theme/list">Home</a></li>
+      <li class="breadcrumb-item"><a href="/demo">Home</a></li>
+      <li class="breadcrumb-item"><a href="/theme/list">主题图导出</a></li>
       <li class="breadcrumb-item active" aria-current="page">Edit</li>
     </ol>
   </nav>
 
+  <p>Id: <span th:text="${id}"></span></p>
+  <p>Name: <span th:text="${themeSetName}"></span></p>
   <p>主题图id: <span th:text="${themeIds}"></span></p>
-  <p>自定义专题图id: <span th:text="${customIds}"></span></p>
+  <p>主题图名称: <span th:text="${themeNames}"></span></p>
+  <p>自定义专题图id: <span th:text="${customThematicIds}"></span></p>
+  <p>自定义专题图名称: <span th:text="${customThematicNames}"></span></p>
 
-  <p>打开该页面则会创建BB_和CC_开头的视图，用dbeaver导出数据并填入表单中后提交，就会下载对应整理好的语句。</p>
-
-  <form method="post" action="/api/sets/handle" target="_self">
+  <form method="post" action="/api/sets/themeExport" target="_self">
     <div class="row">
       <div class="col">
         <div class="form-group">

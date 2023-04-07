@@ -37,8 +37,11 @@ public class ThemeSetPageController {
     @GetMapping("/theme/edit/{id}")
     public String EditPage(Model model, @PathVariable Long id) throws IOException {
         ThemeSetBO boById = themeSetService.getBOByIdAndInit(id);
+        model.addAttribute("themeSetName", boById.getThemeSetName());
         model.addAttribute("themeIds", boById.getThemeIds());
-        model.addAttribute("customIds", boById.getCustomIds());
+        model.addAttribute("themeNames", boById.getThemeNames());
+        model.addAttribute("customThematicIds", boById.getCustomThematicIds());
+        model.addAttribute("customThematicNames", boById.getCustomThematicNames());
         model.addAttribute("createText", boById.getInit());
         model.addAttribute("insertText", boById.getInsertText());
         model.addAttribute("deleteText", boById.getDelete());

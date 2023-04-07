@@ -11,6 +11,7 @@ public interface ThemeSetService {
 
     /**
      * 通过语句id获取对应数据
+     *
      * @param id
      * @return
      */
@@ -18,6 +19,7 @@ public interface ThemeSetService {
 
     /**
      * 根据语句id获取对应数据，并初始化
+     *
      * @param id
      * @return
      * @throws IOException
@@ -26,9 +28,32 @@ public interface ThemeSetService {
 
     /**
      * 生成自定义专题图更新语句
+     *
      * @param response
      * @param vo
      */
-    void handleSet(HttpServletResponse response, SetPostVO vo) throws IOException;
+    void themeExport(HttpServletResponse response, SetPostVO vo) throws IOException;
+
+    /**
+     * 所有地图表导出语句
+     *
+     * @param response
+     * @throws IOException
+     */
+    void allExport(HttpServletResponse response) throws IOException;
+
+    /**
+     * 地图图标库导出
+     * @param response
+     * @throws IOException
+     */
+    void systemCodeExport(HttpServletResponse response) throws IOException;
+
+    /**
+     * 图标库导出
+     * @param response
+     * @throws IOException
+     */
+    void iconLibraryExport(HttpServletResponse response) throws IOException;
 
 }

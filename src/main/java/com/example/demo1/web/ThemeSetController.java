@@ -31,12 +31,28 @@ public class ThemeSetController {
     }
 
     @PostMapping(
-            path = "/handle",
+            path = "/themeExport",
             consumes = {MediaType.APPLICATION_FORM_URLENCODED_VALUE})
-    public void handleSet(HttpServletResponse response, SetPostVO setPostVO) throws IOException {
-        themeSetService.handleSet(response, setPostVO);
-
+    public void themeExport(HttpServletResponse response, SetPostVO setPostVO) throws IOException {
+        themeSetService.themeExport(response, setPostVO);
     }
 
+    @GetMapping(
+            path = "/allExport")
+    public void allExport(HttpServletResponse response) throws IOException {
+        themeSetService.allExport(response);
+    }
+
+    @GetMapping(
+            path = "/systemCodeExport")
+    public void systemCodeExport(HttpServletResponse response) throws IOException {
+        themeSetService.systemCodeExport(response);
+    }
+
+    @GetMapping(
+            path = "/iconLibraryExport")
+    public void iconLibraryExport(HttpServletResponse response) throws IOException {
+        themeSetService.iconLibraryExport(response);
+    }
 
 }

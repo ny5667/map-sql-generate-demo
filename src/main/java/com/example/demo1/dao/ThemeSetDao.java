@@ -59,6 +59,11 @@ public class ThemeSetDao {
         return namedParameterJdbcTemplate.queryForList(Constants.SQL_FIND_THEME_NAMES_BY_ID, id1, String.class);
     }
 
+    public List<String> findCustomThematicNamesById(Long id){
+        Map<String, Long> id1 = Collections.singletonMap("id", id);
+        return namedParameterJdbcTemplate.queryForList(Constants.SQL_FIND_CUSTOM_THEMATIC_NAMES_BY_ID, id1, String.class);
+    }
+
     /**
      * 获取关联的自定义专题图id集合
      * @param id

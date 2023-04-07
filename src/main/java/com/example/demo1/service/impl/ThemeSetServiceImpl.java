@@ -53,6 +53,11 @@ public class ThemeSetServiceImpl implements ThemeSetService {
     private static final String INIT_SQLSERVER_THEME_FILE_PATH = "/sqltemplate/init-sqlserver-theme.sql";
 
     /**
+     * 主题图全部初始化
+     */
+    private static final String INIT_SQLSERVER_ALL_FILE_PATH = "/sqltemplate/init.sqlserver-all.sql";
+
+    /**
      * 删除主题文件路径
      */
     private static final String DELETE_SQLSERVER_THEME_FILE_PATH = "/sqltemplate/delete-sqlserver-theme.sql";
@@ -61,6 +66,11 @@ public class ThemeSetServiceImpl implements ThemeSetService {
      * 行
      */
     private static final String ROW_EXPR = "\n";
+
+    /**
+     * 字段空值
+     */
+    private static final String VALUE_NULL = "NULL";
 
     /**
      * sql结尾的;符号
@@ -104,17 +114,21 @@ TIMESTAMP'2021-12-12 16:58:36.277'
 
     @Override
     public ThemeSetBO getBOById(Long id) throws IOException {
+
+        ThemeSetDto themeSetDto = themeSetDao.findById(id);
+
         String themeIds_s = themeSetDao.findThemeIdsById(id).stream().map(Object::toString).collect(Collectors.joining(","));
-        Assert.hasLength(themeIds_s,"主题图id为空");
+        Assert.hasLength(themeIds_s, "主题图id为空");
         String themeNames_s = String.join(",", themeSetDao.findThemeNamesById(id));
+        String customMaticNames = String.join(",", themeSetDao.findCustomThematicNamesById(id));
         String customIds_s = themeSetDao.findCustomIds(id).stream().map(Object::toString).collect(Collectors.joining(","));
-        Assert.hasLength(customIds_s,"自定义专题图id为空");
+        Assert.hasLength(customIds_s, "自定义专题图id为空");
         String init_s = getString(INIT_SQLSERVER_THEME_FILE_PATH);
         String delete_s = getString(DELETE_SQLSERVER_THEME_FILE_PATH);
         init_s = getString(init_s, themeIds_s, customIds_s);
         delete_s = getString(delete_s, themeIds_s, customIds_s);
-        String tableInsertString = getTableInsertString();
-        return new ThemeSetBO(themeIds_s, themeNames_s, customIds_s, init_s, delete_s, tableInsertString);
+        String tableInsertString = getTableInsertString(Arrays.asList("BB_", "CC_"));
+        return new ThemeSetBO(themeSetDto.getName(), themeIds_s, themeNames_s, customIds_s,customMaticNames, init_s, delete_s, tableInsertString);
     }
 
     @Override
@@ -125,16 +139,16 @@ TIMESTAMP'2021-12-12 16:58:36.277'
     }
 
     @Override
-    public void handleSet(HttpServletResponse response, SetPostVO vo) throws IOException {
+    public void themeExport(HttpServletResponse response, SetPostVO vo) throws IOException {
         ThemeSetBO boById = getBOById(vo.getId());
         ThemeSetDto themeSetDto = themeSetDao.findById(vo.getId());
 
-        String insertText = vo.getInsertText();
+        String insertText = boById.getInsertText();
+
         List<String> lines = matchInsertSql(insertText);
         List<String> newDeletes = new ArrayList<>();
         List<String> newInserts = new ArrayList<>();
         AdminInfo adminInfo = new AdminInfo();
-        String customDir = createCustomDir();
 
         Map<String, RowBO> map = new HashMap<>();
         for (String item :
@@ -148,35 +162,109 @@ TIMESTAMP'2021-12-12 16:58:36.277'
                 String rowText = lines.get(i);
                 RowBO rowBO = map.get(rowText);
                 newDeletes.add(getNewDeleteSql(rowBO));
-                for (int c = 0; c < rowBO.getColumns().size(); c++) {
-                    setInsertValue(saveType, rowBO, c, adminInfo);
-                }
+                //设置字段默认值
+                setInsertValue(saveType, rowBO, adminInfo);
                 String insertSql = getInsertSql(rowBO);
                 newInserts.add(insertSql);
             }
             String saveText_d = getSaveText(newDeletes, lines, insertText);
             String saveText_i = getSaveText(newInserts, lines, insertText);
 
-            String fileContent = vo.getDeleteText() + ROW_EXPR + saveText_d + ROW_EXPR + saveText_i;
-            saveSQLFile(fileContent, customDir, saveType, listOfFileNames);
+            String fileContent = boById.getDelete() + ROW_EXPR + saveText_d + ROW_EXPR + saveText_i;
+            saveSQLFile(fileContent, saveType, listOfFileNames);
         }
+        String outputFileName = getOutputFileName(Constants.MAP_VERSION + "-" + themeSetDto.getName() + "-更新新包的增量.zip");
+        downloadZipFile(response, listOfFileNames, outputFileName);
+    }
+
+    @Override
+    public void allExport(HttpServletResponse response) throws IOException {
+        createSqlServerAllView();
+        String outputFileName = getOutputFileName(Constants.MAP_VERSION + "-地图模块初始化语句-首次上包执行的全量sql.zip");
+        exportInsertTextAndDownload(response, Arrays.asList("AA_"), outputFileName);
+    }
 
 
-        downloadZipFile(response, listOfFileNames, themeSetDto);
+
+    @Override
+    public void systemCodeExport(HttpServletResponse response) throws IOException {
+        createSqlServerAllView();
+        String outputFileName = getOutputFileName(Constants.MAP_VERSION + "-地图图层编码初始化语句sql.zip");
+        exportInsertTextAndDownload(response, Arrays.asList("AB_"), outputFileName);
+    }
+
+    @Override
+    public void iconLibraryExport(HttpServletResponse response) throws IOException {
+        createSqlServerAllView();
+        String outputFileName = getOutputFileName(Constants.MAP_VERSION + "-地图图标库初始化-更新新包的增量sql.zip");
+        exportInsertTextAndDownload(response, Arrays.asList("AA_SESGIS_ICON_LIBRARIES", "AA_SESGIS_LIBRARY_TYPES"), outputFileName);
     }
 
     /*--------------------------------------------------------------------公共方法------------------------------------------------------------------------------*/
+
+    /**
+     * 创建sqlserver所有的视图
+     * @throws IOException
+     */
+    private void createSqlServerAllView() throws IOException {
+        String init_s = getString(INIT_SQLSERVER_ALL_FILE_PATH);
+        executeSql(init_s);
+    }
+
+    /**
+     * 获取下载的文件名
+     *
+     * @param fileNameSuffix 文件名后缀
+     * @return
+     */
+    private String getOutputFileName(String fileNameSuffix) {
+        return "" + getDateString() + "-" + fileNameSuffix;
+    }
+
+    /**
+     * 导出新增的模板并下载
+     *
+     * @param response     下载返回
+     * @param viewPrefixes 视图的前缀
+     * @param fileName1    导出的文件名称
+     */
+    void exportInsertTextAndDownload(HttpServletResponse response, List<String> viewPrefixes, String fileName1) throws IOException {
+        String insertText = getTableInsertString(viewPrefixes);
+        List<String> lines = matchInsertSql(insertText);
+        List<String> newInserts = new ArrayList<>();
+        AdminInfo adminInfo = new AdminInfo();
+
+        Map<String, RowBO> map = new HashMap<>();
+        for (String item :
+                lines) {
+            map.put(item, getRowBO(item));
+        }
+        List<String> listOfFileNames = new ArrayList<>();
+        for (DELETE_SAVE_TYPE saveType :
+                DELETE_SAVE_TYPE.values()) {
+            for (int i = 0; i < lines.size(); i++) {
+                String rowText = lines.get(i);
+                RowBO rowBO = map.get(rowText);
+                //设置字段默认值
+                setInsertValue(saveType, rowBO, adminInfo);
+                String insertSql = getInsertSql(rowBO);
+                newInserts.add(insertSql);
+            }
+            String saveText_i = getSaveText(newInserts, lines, insertText);
+            saveSQLFile(saveText_i, saveType, listOfFileNames);
+        }
+        downloadZipFile(response, listOfFileNames, fileName1);
+    }
 
     /**
      * 下载压缩包
      *
      * @param response        接口返回
      * @param listOfFileNames 下载的文件
-     * @param themeSetDto     导出的集合名称
+     * @param filename       导出的集合名称
      */
-    public void downloadZipFile(HttpServletResponse response, List<String> listOfFileNames, ThemeSetDto themeSetDto) {
+    public void downloadZipFile(HttpServletResponse response, List<String> listOfFileNames, String filename) {
 //        String filename = "download11111" + getDateString() + "-" + themeSetDto.getName() + ".zip";
-        String filename = "" + getDateString() + "-" + themeSetDto.getName() + "-更新新包的增量.zip";
         System.out.println(filename);
         response.setContentType("application/zip");
 //        response.setHeader("Content-Disposition", "attachment; filename=" + filename);
@@ -212,13 +300,11 @@ TIMESTAMP'2021-12-12 16:58:36.277'
     /**
      * 保存文件
      *
-     * @param sqlText         要保存的文本
-     * @param outputDirectory 保存的文件夹
-     * @param dbType          数据库类型
-     * @param listOfFileName  保存的文件名
+     * @param sqlText        要保存的文本
+     * @param dbType         数据库类型
+     * @param listOfFileName 保存的文件名
      */
-    private void saveSQLFile(String sqlText, String outputDirectory, DELETE_SAVE_TYPE dbType, List<String> listOfFileName) throws IOException {
-
+    private void saveSQLFile(String sqlText, DELETE_SAVE_TYPE dbType, List<String> listOfFileName) throws IOException {
         String filename = "";
         switch (dbType) {
             case DELETE_AND_ORACLE:
@@ -233,6 +319,9 @@ TIMESTAMP'2021-12-12 16:58:36.277'
             default:
                 break;
         }
+        //保存的文件夹
+        String outputDirectory = createCustomDir();
+
         String targetFile = outputDirectory + "\\" + filename;
         listOfFileName.add(targetFile);
 
@@ -273,24 +362,30 @@ TIMESTAMP'2021-12-12 16:58:36.277'
      *
      * @param dbtype    数据库类型
      * @param rowBO     一行
-     * @param i         第i列
      * @param adminInfo 默认数据
      */
-    private void setInsertValue(DELETE_SAVE_TYPE dbtype, RowBO rowBO, int i, AdminInfo adminInfo) {
-        if (isDateTime(rowBO.getColumns().get(i), rowBO.getValues().get(i))) {
-            rowBO.getValues().set(i, getDateFunction(dbtype));
-        }
-        if (isCompany(rowBO.getColumns().get(i))) {
-            rowBO.getValues().set(i, adminInfo.getADMIN_COMPANY_ID());
-        }
-        if (isDepartment(rowBO.getColumns().get(i))) {
-            rowBO.getValues().set(i, adminInfo.getADMIN_DEPARTMENT_ID());
-        }
-        if (isPosition(rowBO.getColumns().get(i))) {
-            rowBO.getValues().set(i, adminInfo.getADMIN_POSITION_ID());
-        }
-        if (isStaff(rowBO.getColumns().get(i))) {
-            rowBO.getValues().set(i, adminInfo.getADMIN_STAFF_ID());
+    private void setInsertValue(DELETE_SAVE_TYPE dbtype, RowBO rowBO, AdminInfo adminInfo) {
+        for (int c = rowBO.getColumns().size() - 1; c >= 0; c--) {
+            if (VALUE_NULL.equals(rowBO.getValues().get(c))) {
+                rowBO.getColumns().remove(c);
+                rowBO.getValues().remove(c);
+                continue;
+            }
+            if (isDateTime(rowBO.getColumns().get(c), rowBO.getValues().get(c))) {
+                rowBO.getValues().set(c, getDateFunction(dbtype));
+            }
+            if (isCompany(rowBO.getColumns().get(c))) {
+                rowBO.getValues().set(c, adminInfo.getADMIN_COMPANY_ID());
+            }
+            if (isDepartment(rowBO.getColumns().get(c))) {
+                rowBO.getValues().set(c, adminInfo.getADMIN_DEPARTMENT_ID());
+            }
+            if (isPosition(rowBO.getColumns().get(c))) {
+                rowBO.getValues().set(c, adminInfo.getADMIN_POSITION_ID());
+            }
+            if (isStaff(rowBO.getColumns().get(c))) {
+                rowBO.getValues().set(c, adminInfo.getADMIN_STAFF_ID());
+            }
         }
     }
 
@@ -660,10 +755,11 @@ TIMESTAMP'2021-12-12 16:58:36.277'
     /**
      * 获取主题图和自定义专题图插入的SQL
      *
+     * @param viewPrefixes 视图的前缀
      * @return
      */
-    private String getTableInsertString() {
-        List<String> bbAndCCViewNames = getBBAndCCViewNames();
+    private String getTableInsertString(List<String> viewPrefixes) {
+        List<String> bbAndCCViewNames = getViewNames(viewPrefixes);
         StringBuilder sb = new StringBuilder();
         for (String viewName : bbAndCCViewNames) {
             String querySql = "SELECT * FROM " + viewName;
@@ -724,10 +820,14 @@ TIMESTAMP'2021-12-12 16:58:36.277'
     /**
      * 查询数据库中BB_和CC_开头的视图
      *
+     * @param viewPrefix 视图的前缀
      * @return
      */
-    public List<String> getBBAndCCViewNames() {
-        String sql = "SELECT name FROM sys.objects WHERE type_desc='VIEW' AND (name LIKE 'BB_%' OR name LIKE 'CC_%')";
+    public List<String> getViewNames(List<String> viewPrefix) {
+        Assert.notEmpty(viewPrefix, "tablePrefix is empty");
+//        String sql = "SELECT name FROM sys.objects WHERE type_desc='VIEW' AND (name LIKE 'BB_%' OR name LIKE 'CC_%')";
+        String collect = viewPrefix.stream().map(v -> "name LIKE '" + v + "%'").collect(Collectors.joining(" OR "));
+        String sql = String.format("SELECT name FROM sys.objects WHERE type_desc='VIEW' AND (%s)", collect);
         return jdbcTemplate.queryForList(sql, String.class);
     }
 
@@ -740,9 +840,11 @@ TIMESTAMP'2021-12-12 16:58:36.277'
     private static String formatValue(Object value) {
         if (value == null) {
             return "NULL";
-        } else if (value instanceof String || value instanceof java.sql.Date
+        } else if (value instanceof java.sql.Date
                 || value instanceof java.sql.Time || value instanceof java.sql.Timestamp) {
             return "'" + value.toString().replace("'", "''") + "'";
+        }else if (value instanceof String) {
+            return "N'" + value.toString().replace("'", "''") + "'";
         } else {
             return value.toString();
         }
