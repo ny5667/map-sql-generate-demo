@@ -42,3 +42,7 @@ https://simplesolution.dev/spring-boot-download-multiple-files-as-zip-file/
 INSERT INTO springbootdb.book (id,author,title) VALUES (1,'11','1111');
 INSERT INTO springbootdb.book (id,author,title) VALUES (2,'22','2222');
 ```
+
+https://www.novicedev.com/blog/how-create-git-tags-examples
+
+https://ciphertrick.com/how-to-push-git-tags-to-remote
