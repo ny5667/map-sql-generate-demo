@@ -1,1 +1,1 @@
-%GISANALYSIS_HOME% -Xmx1500m -XX:MetaspaceSize=256m -XX:MaxPermSize=256m -jar -Dfile.encoding=UTF-8 demo1-0.0.1-SNAPSHOT.jar
+%GISANALYSIS_HOME% -Xmx15000m -XX:MetaspaceSize=2560m -XX:MaxPermSize=2560m -jar -Dfile.encoding=UTF-8 demo1-0.0.1-SNAPSHOT.jar

@@ -762,9 +762,9 @@ TIMESTAMP'2021-12-12 16:58:36.277'
         List<String> bbAndCCViewNames = getViewNames(viewPrefixes);
         StringBuilder sb = new StringBuilder();
         for (String viewName : bbAndCCViewNames) {
-            String querySql = "SELECT * FROM " + viewName;
-            logger.error("querySql:");
-            logger.error(querySql);
+//            String querySql = "SELECT * FROM " + viewName;
+//            logger.error("querySql:");
+//            logger.error(querySql);
             List<Map<String, Object>> rows = jdbcTemplate.queryForList("SELECT * FROM " + viewName);
             for (Map<String, Object> row : rows) {
                 String tableName = row.getOrDefault("TABLE_NAME", viewName).toString();
