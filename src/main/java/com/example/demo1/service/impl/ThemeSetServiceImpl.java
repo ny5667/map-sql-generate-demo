@@ -128,7 +128,7 @@ TIMESTAMP'2021-12-12 16:58:36.277'
         init_s = getString(init_s, themeIds_s, customIds_s);
         delete_s = getString(delete_s, themeIds_s, customIds_s);
         String tableInsertString = getTableInsertString(Arrays.asList("BB_", "CC_"));
-        return new ThemeSetBO(themeSetDto.getName(), themeIds_s, themeNames_s, customIds_s,customMaticNames, init_s, delete_s, tableInsertString);
+        return new ThemeSetBO(themeSetDto.getName(), themeIds_s, themeNames_s, customIds_s, customMaticNames, init_s, delete_s, tableInsertString);
     }
 
     @Override
@@ -142,9 +142,65 @@ TIMESTAMP'2021-12-12 16:58:36.277'
     public void themeExport(HttpServletResponse response, SetPostVO vo) throws IOException {
         ThemeSetBO boById = getBOById(vo.getId());
         ThemeSetDto themeSetDto = themeSetDao.findById(vo.getId());
+        String outputFileName = getOutputFileName(Constants.MAP_VERSION + "-" + themeSetDto.getName() + "-更新新包的增量.zip");
+        exportInsertTextAndDownload(response, Arrays.asList("BB_", "CC_"), outputFileName, boById.getDelete(), EXPORT_TYPE.DELETE_AND_INIT_EXPORT);
+    }
 
-        String insertText = boById.getInsertText();
+    @Override
+    public void allExport(HttpServletResponse response) throws IOException {
+        createSqlServerAllView();
+        String outputFileName = getOutputFileName(Constants.MAP_VERSION + "-地图模块初始化语句-首次上包执行的全量sql.zip");
+        exportInsertTextAndDownload(response, Arrays.asList("AA_"), outputFileName, "", EXPORT_TYPE.INIT_EXPORT);
+    }
 
+
+    @Override
+    public void systemCodeExport(HttpServletResponse response) throws IOException {
+        createSqlServerAllView();
+        String outputFileName = getOutputFileName(Constants.MAP_VERSION + "-地图图层编码初始化语句sql.zip");
+        exportInsertTextAndDownload(response, Arrays.asList("AB_"), outputFileName, "", EXPORT_TYPE.INIT_EXPORT);
+    }
+
+    @Override
+    public void iconLibraryExport(HttpServletResponse response) throws IOException {
+        createSqlServerAllView();
+        String outputFileName = getOutputFileName(Constants.MAP_VERSION + "-地图图标库初始化-更新新包的增量sql.zip");
+        exportInsertTextAndDownload(response, Arrays.asList("AA_SESGIS_ICON_LIBRARIES", "AA_SESGIS_LIBRARY_TYPES"), outputFileName, "", EXPORT_TYPE.DELETE_AND_INIT_EXPORT);
+    }
+
+    /*--------------------------------------------------------------------公共方法------------------------------------------------------------------------------*/
+
+    /**
+     * 创建sqlserver所有的视图
+     *
+     * @throws IOException
+     */
+    private void createSqlServerAllView() throws IOException {
+        String init_s = getString(INIT_SQLSERVER_ALL_FILE_PATH);
+        executeSql(init_s);
+    }
+
+    /**
+     * 获取下载的文件名
+     *
+     * @param fileNameSuffix 文件名后缀
+     * @return
+     */
+    private String getOutputFileName(String fileNameSuffix) {
+        return "" + getDateString() + "-" + fileNameSuffix;
+    }
+
+    /**
+     * 导出新增的模板并下载
+     *
+     * @param response      下载返回
+     * @param viewPrefixes  视图的前缀
+     * @param fileName1     导出的文件名称
+     * @param contentPrefix 最前面的文本删除文本
+     * @param exportType    导出类型
+     */
+    void exportInsertTextAndDownload(HttpServletResponse response, List<String> viewPrefixes, String fileName1, String contentPrefix, EXPORT_TYPE exportType) throws IOException {
+        String insertText = getTableInsertString(viewPrefixes);
         List<String> lines = matchInsertSql(insertText);
         List<String> newDeletes = new ArrayList<>();
         List<String> newInserts = new ArrayList<>();
@@ -169,89 +225,20 @@ TIMESTAMP'2021-12-12 16:58:36.277'
             }
             String saveText_d = getSaveText(newDeletes, lines, insertText);
             String saveText_i = getSaveText(newInserts, lines, insertText);
-
-            String fileContent = boById.getDelete() + ROW_EXPR + saveText_d + ROW_EXPR + saveText_i;
-            saveSQLFile(fileContent, saveType, listOfFileNames);
-        }
-        String outputFileName = getOutputFileName(Constants.MAP_VERSION + "-" + themeSetDto.getName() + "-更新新包的增量.zip");
-        downloadZipFile(response, listOfFileNames, outputFileName);
-    }
-
-    @Override
-    public void allExport(HttpServletResponse response) throws IOException {
-        createSqlServerAllView();
-        String outputFileName = getOutputFileName(Constants.MAP_VERSION + "-地图模块初始化语句-首次上包执行的全量sql.zip");
-        exportInsertTextAndDownload(response, Arrays.asList("AA_"), outputFileName);
-    }
-
-
-
-    @Override
-    public void systemCodeExport(HttpServletResponse response) throws IOException {
-        createSqlServerAllView();
-        String outputFileName = getOutputFileName(Constants.MAP_VERSION + "-地图图层编码初始化语句sql.zip");
-        exportInsertTextAndDownload(response, Arrays.asList("AB_"), outputFileName);
-    }
-
-    @Override
-    public void iconLibraryExport(HttpServletResponse response) throws IOException {
-        createSqlServerAllView();
-        String outputFileName = getOutputFileName(Constants.MAP_VERSION + "-地图图标库初始化-更新新包的增量sql.zip");
-        exportInsertTextAndDownload(response, Arrays.asList("AA_SESGIS_ICON_LIBRARIES", "AA_SESGIS_LIBRARY_TYPES"), outputFileName);
-    }
-
-    /*--------------------------------------------------------------------公共方法------------------------------------------------------------------------------*/
-
-    /**
-     * 创建sqlserver所有的视图
-     * @throws IOException
-     */
-    private void createSqlServerAllView() throws IOException {
-        String init_s = getString(INIT_SQLSERVER_ALL_FILE_PATH);
-        executeSql(init_s);
-    }
-
-    /**
-     * 获取下载的文件名
-     *
-     * @param fileNameSuffix 文件名后缀
-     * @return
-     */
-    private String getOutputFileName(String fileNameSuffix) {
-        return "" + getDateString() + "-" + fileNameSuffix;
-    }
-
-    /**
-     * 导出新增的模板并下载
-     *
-     * @param response     下载返回
-     * @param viewPrefixes 视图的前缀
-     * @param fileName1    导出的文件名称
-     */
-    void exportInsertTextAndDownload(HttpServletResponse response, List<String> viewPrefixes, String fileName1) throws IOException {
-        String insertText = getTableInsertString(viewPrefixes);
-        List<String> lines = matchInsertSql(insertText);
-        List<String> newInserts = new ArrayList<>();
-        AdminInfo adminInfo = new AdminInfo();
-
-        Map<String, RowBO> map = new HashMap<>();
-        for (String item :
-                lines) {
-            map.put(item, getRowBO(item));
-        }
-        List<String> listOfFileNames = new ArrayList<>();
-        for (DELETE_SAVE_TYPE saveType :
-                DELETE_SAVE_TYPE.values()) {
-            for (int i = 0; i < lines.size(); i++) {
-                String rowText = lines.get(i);
-                RowBO rowBO = map.get(rowText);
-                //设置字段默认值
-                setInsertValue(saveType, rowBO, adminInfo);
-                String insertSql = getInsertSql(rowBO);
-                newInserts.add(insertSql);
+            StringBuilder builder = new StringBuilder();
+            if(contentPrefix != null && !contentPrefix.isEmpty()){
+                builder.append(contentPrefix).append(ROW_EXPR);
             }
-            String saveText_i = getSaveText(newInserts, lines, insertText);
-            saveSQLFile(saveText_i, saveType, listOfFileNames);
+            switch (exportType) {
+                case INIT_EXPORT:
+                    builder.append(saveText_i);
+                    break;
+                case DELETE_AND_INIT_EXPORT:
+                    builder.append(saveText_d).append(ROW_EXPR).append(saveText_i);
+                    break;
+                default:
+            }
+            saveSQLFile(builder.toString(), saveType, listOfFileNames);
         }
         downloadZipFile(response, listOfFileNames, fileName1);
     }
@@ -261,7 +248,7 @@ TIMESTAMP'2021-12-12 16:58:36.277'
      *
      * @param response        接口返回
      * @param listOfFileNames 下载的文件
-     * @param filename       导出的集合名称
+     * @param filename        导出的集合名称
      */
     public void downloadZipFile(HttpServletResponse response, List<String> listOfFileNames, String filename) {
 //        String filename = "download11111" + getDateString() + "-" + themeSetDto.getName() + ".zip";
@@ -843,7 +830,7 @@ TIMESTAMP'2021-12-12 16:58:36.277'
         } else if (value instanceof java.sql.Date
                 || value instanceof java.sql.Time || value instanceof java.sql.Timestamp) {
             return "'" + value.toString().replace("'", "''") + "'";
-        }else if (value instanceof String) {
+        } else if (value instanceof String) {
             return "N'" + value.toString().replace("'", "''") + "'";
         } else {
             return value.toString();
