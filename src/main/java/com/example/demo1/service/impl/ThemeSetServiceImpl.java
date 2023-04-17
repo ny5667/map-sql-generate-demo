@@ -141,8 +141,8 @@ TIMESTAMP'2021-12-12 16:58:36.277'
     @Override
     public void themeExport(HttpServletResponse response, SetPostVO vo) throws IOException {
         ThemeSetBO boById = getBOById(vo.getId());
-        ThemeSetDto themeSetDto = themeSetDao.findById(vo.getId());
-        String outputFileName = getOutputFileName(Constants.MAP_VERSION + "-" + themeSetDto.getName() + "-更新新包的增量.zip");
+        String name = "主题：" + boById.getThemeNames() + "-专题图：" + boById.getCustomThematicNames();
+        String outputFileName = getOutputFileName(Constants.MAP_VERSION + "-" + name + "-更新新包的增量.zip");
         exportInsertTextAndDownload(response, Arrays.asList("BB_", "CC_"), outputFileName, boById.getDelete(), EXPORT_TYPE.DELETE_AND_INIT_EXPORT);
     }
 
@@ -485,6 +485,7 @@ TIMESTAMP'2021-12-12 16:58:36.277'
         for (int i = 0; i < inserts.size(); i++) {
             sqltexts = sqltexts.replace(inserts.get(i), newSqls.get(i));
         }
+        newSqls.clear();
         return sqltexts;
     }
 
