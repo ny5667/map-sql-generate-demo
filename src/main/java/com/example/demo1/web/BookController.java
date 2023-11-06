@@ -3,7 +3,6 @@ package com.example.demo1.web;
 import com.example.demo1.persistence.model.Book;
 import com.example.demo1.persistence.repo.BookRepository;
 import com.example.demo1.web.exception.*;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 
@@ -13,8 +12,11 @@ import java.util.List;
 @RequestMapping("/api/books")
 public class BookController {
 
-    @Autowired
-    private BookRepository bookRepository;
+    private final BookRepository bookRepository;
+
+    public BookController(BookRepository bookRepository) {
+        this.bookRepository = bookRepository;
+    }
 
     @GetMapping
     public Iterable findAll() {

@@ -4,7 +4,6 @@ import com.example.demo1.dao.ThemeSetDao;
 import com.example.demo1.dto.ThemeSetDto;
 import com.example.demo1.service.ThemeSetService;
 import com.example.demo1.vo.SetPostVO;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -19,11 +18,14 @@ import java.util.List;
 @RequestMapping("/api/sets")
 public class ThemeSetController {
 
-    @Autowired
-    ThemeSetService themeSetService;
+    private final ThemeSetService themeSetService;
 
-    @Autowired
-    ThemeSetDao themeSetDao;
+    private final ThemeSetDao themeSetDao;
+
+    public ThemeSetController(ThemeSetService themeSetService, ThemeSetDao themeSetDao) {
+        this.themeSetService = themeSetService;
+        this.themeSetDao = themeSetDao;
+    }
 
     @GetMapping
     public List<ThemeSetDto> findAll() {

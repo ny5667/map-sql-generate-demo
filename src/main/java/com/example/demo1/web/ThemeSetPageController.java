@@ -6,7 +6,6 @@ import com.example.demo1.service.ThemeSetService;
 import com.example.demo1.vo.ThemeSetBO;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -20,12 +19,14 @@ public class ThemeSetPageController {
 
     Logger logger = LoggerFactory.getLogger(ThemeSetPageController.class);
 
+    private final ThemeSetService themeSetService;
 
-    @Autowired
-    private ThemeSetService themeSetService;
+    private final ThemeSetDao themeSetDao;
 
-    @Autowired
-    ThemeSetDao themeSetDao;
+    public ThemeSetPageController(ThemeSetService themeSetService, ThemeSetDao themeSetDao) {
+        this.themeSetService = themeSetService;
+        this.themeSetDao = themeSetDao;
+    }
 
     @GetMapping("/theme/list")
     public String listPage(Model model) {
@@ -35,7 +36,7 @@ public class ThemeSetPageController {
     }
 
     @GetMapping("/theme/edit/{id}")
-    public String EditPage(Model model, @PathVariable Long id) throws IOException {
+    public String editPage(Model model, @PathVariable Long id) throws IOException {
         ThemeSetBO boById = themeSetService.getBOByIdAndInit(id);
         model.addAttribute("themeSetName", boById.getThemeSetName());
         model.addAttribute("themeIds", boById.getThemeIds());

@@ -2,58 +2,58 @@ package com.example.demo1.vo;
 
 public class AdminInfo {
 
-    public String ADMIN_COMPANY_ID;
+    private String adminCompanyId;
 
-    public String ADMIN_DEPARTMENT_ID;
+    private String adminDepartmentId;
 
-    public String ADMIN_POSITION_ID;
+    private String adminPositionId;
 
-    public String ADMIN_STAFF_ID;
+    private String adminStaffId;
 
     public AdminInfo()
     {
-        this.ADMIN_COMPANY_ID = "${ADMIN_COMPANY_ID}";
-        this.ADMIN_DEPARTMENT_ID = "${ADMIN_DEPARTMENT_ID}";
-        this.ADMIN_POSITION_ID = "${ADMIN_POSITION_ID}";
-        this.ADMIN_STAFF_ID = "${ADMIN_STAFF_ID}";
+        this.adminCompanyId = "${ADMIN_COMPANY_ID}";
+        this.adminDepartmentId = "${ADMIN_DEPARTMENT_ID}";
+        this.adminPositionId = "${ADMIN_POSITION_ID}";
+        this.adminStaffId = "${ADMIN_STAFF_ID}";
     }
 
-    public AdminInfo(String ADMIN_COMPANY_ID, String ADMIN_DEPARTMENT_ID, String ADMIN_POSITION_ID, String ADMIN_STAFF_ID) {
-        this.ADMIN_COMPANY_ID = ADMIN_COMPANY_ID;
-        this.ADMIN_DEPARTMENT_ID = ADMIN_DEPARTMENT_ID;
-        this.ADMIN_POSITION_ID = ADMIN_POSITION_ID;
-        this.ADMIN_STAFF_ID = ADMIN_STAFF_ID;
+    public AdminInfo(String adminCompanyId, String adminDepartmentId, String adminPositionId, String adminStaffId) {
+        this.adminCompanyId = adminCompanyId;
+        this.adminDepartmentId = adminDepartmentId;
+        this.adminPositionId = adminPositionId;
+        this.adminStaffId = adminStaffId;
     }
 
-    public String getADMIN_COMPANY_ID() {
-        return ADMIN_COMPANY_ID;
+    public String getAdminCompanyId() {
+        return adminCompanyId;
     }
 
-    public void setADMIN_COMPANY_ID(String ADMIN_COMPANY_ID) {
-        this.ADMIN_COMPANY_ID = ADMIN_COMPANY_ID;
+    public void setAdminCompanyId(String adminCompanyId) {
+        this.adminCompanyId = adminCompanyId;
     }
 
-    public String getADMIN_DEPARTMENT_ID() {
-        return ADMIN_DEPARTMENT_ID;
+    public String getAdminDepartmentId() {
+        return adminDepartmentId;
     }
 
-    public void setADMIN_DEPARTMENT_ID(String ADMIN_DEPARTMENT_ID) {
-        this.ADMIN_DEPARTMENT_ID = ADMIN_DEPARTMENT_ID;
+    public void setAdminDepartmentId(String adminDepartmentId) {
+        this.adminDepartmentId = adminDepartmentId;
     }
 
-    public String getADMIN_POSITION_ID() {
-        return ADMIN_POSITION_ID;
+    public String getAdminPositionId() {
+        return adminPositionId;
     }
 
-    public void setADMIN_POSITION_ID(String ADMIN_POSITION_ID) {
-        this.ADMIN_POSITION_ID = ADMIN_POSITION_ID;
+    public void setAdminPositionId(String adminPositionId) {
+        this.adminPositionId = adminPositionId;
     }
 
-    public String getADMIN_STAFF_ID() {
-        return ADMIN_STAFF_ID;
+    public String getAdminStaffId() {
+        return adminStaffId;
     }
 
-    public void setADMIN_STAFF_ID(String ADMIN_STAFF_ID) {
-        this.ADMIN_STAFF_ID = ADMIN_STAFF_ID;
+    public void setAdminStaffId(String adminStaffId) {
+        this.adminStaffId = adminStaffId;
     }
 }

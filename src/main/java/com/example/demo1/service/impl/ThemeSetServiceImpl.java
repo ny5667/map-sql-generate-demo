@@ -13,7 +13,6 @@ import gudusoft.gsqlparser.nodes.TResultColumn;
 import gudusoft.gsqlparser.stmt.TInsertSqlStatement;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.FileSystemResource;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
@@ -82,25 +81,24 @@ public class ThemeSetServiceImpl implements ThemeSetService {
      */
     private static final String INSERT = "insert";
 
-    @Autowired
-    private JdbcTemplate jdbcTemplate;
+    private final JdbcTemplate jdbcTemplate;
 
 
     /*
-'2021-11-04 18:54:11.03'
-@"'\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}.\d+'"
+        '2021-11-04 18:54:11.03'
+        @"'\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}.\d+'"
 
-TO_DATE\('\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}','yyyy-mm-dd hh24:mi:ss'\)
-@"TO_DATE\('\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}','yyyy-mm-dd hh24:mi:ss'\)"
+        TO_DATE\('\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}','yyyy-mm-dd hh24:mi:ss'\)
+        @"TO_DATE\('\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}','yyyy-mm-dd hh24:mi:ss'\)"
 
-TIMESTAMP '2021-11-02 16:05:33'
-TIMESTAMP'2021-12-12 16:58:36.277'
-@"TIMESTAMP'\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}.?\d*'"
+        TIMESTAMP '2021-11-02 16:05:33'
+        TIMESTAMP'2021-12-12 16:58:36.277'
+        @"TIMESTAMP'\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}.?\d*'"
      */
     /**
      * 匹配时间正则表达式
      */
-    private List<String> DATETIME_PATTERN = Arrays.asList(
+    private List<String> dateTimePattern = Arrays.asList(
             "'\\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2}:\\d{2}.\\d+'",
             "TO_DATE\\('\\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2}:\\d{2}','yyyy-mm-dd hh24:mi:ss'\\)",
             "TIMESTAMP'\\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2}:\\d{2}.?\\d*'",
@@ -109,26 +107,30 @@ TIMESTAMP'2021-12-12 16:58:36.277'
             "NOW\\(\\)"
     );
 
-    @Autowired
-    ThemeSetDao themeSetDao;
+    private final ThemeSetDao themeSetDao;
+
+    public ThemeSetServiceImpl(JdbcTemplate jdbcTemplate, ThemeSetDao themeSetDao) {
+        this.jdbcTemplate = jdbcTemplate;
+        this.themeSetDao = themeSetDao;
+    }
 
     @Override
     public ThemeSetBO getBOById(Long id) throws IOException {
 
         ThemeSetDto themeSetDto = themeSetDao.findById(id);
 
-        String themeIds_s = themeSetDao.findThemeIdsById(id).stream().map(Object::toString).collect(Collectors.joining(","));
-        Assert.hasLength(themeIds_s, "主题图id为空");
-        String themeNames_s = String.join(",", themeSetDao.findThemeNamesById(id));
+        String themeIdsStr = themeSetDao.findThemeIdsById(id).stream().map(Object::toString).collect(Collectors.joining(","));
+        Assert.hasLength(themeIdsStr, "主题图id为空");
+        String themeNamesStr = String.join(",", themeSetDao.findThemeNamesById(id));
         String customMaticNames = String.join(",", themeSetDao.findCustomThematicNamesById(id));
-        String customIds_s = themeSetDao.findCustomIds(id).stream().map(Object::toString).collect(Collectors.joining(","));
-        Assert.hasLength(customIds_s, "自定义专题图id为空");
-        String init_s = getString(INIT_SQLSERVER_THEME_FILE_PATH);
-        String delete_s = getString(DELETE_SQLSERVER_THEME_FILE_PATH);
-        init_s = getString(init_s, themeIds_s, customIds_s);
-        delete_s = getString(delete_s, themeIds_s, customIds_s);
+        String customIdsStr = themeSetDao.findCustomIds(id).stream().map(Object::toString).collect(Collectors.joining(","));
+        Assert.hasLength(customIdsStr, "自定义专题图id为空");
+        String initStr = getString(INIT_SQLSERVER_THEME_FILE_PATH);
+        String deleteStr = getString(DELETE_SQLSERVER_THEME_FILE_PATH);
+        initStr = getString(initStr, themeIdsStr, customIdsStr);
+        deleteStr = getString(deleteStr, themeIdsStr, customIdsStr);
         String tableInsertString = getTableInsertString(Arrays.asList("BB_", "CC_"));
-        return new ThemeSetBO(themeSetDto.getName(), themeIds_s, themeNames_s, customIds_s, customMaticNames, init_s, delete_s, tableInsertString);
+        return new ThemeSetBO(themeSetDto.getName(), themeIdsStr, themeNamesStr, customIdsStr, customMaticNames, initStr, deleteStr, tableInsertString);
     }
 
     @Override
@@ -176,18 +178,18 @@ TIMESTAMP'2021-12-12 16:58:36.277'
      * @throws IOException
      */
     private void createSqlServerAllView() throws IOException {
-        String init_s = getString(INIT_SQLSERVER_ALL_FILE_PATH);
-        executeSql(init_s);
+        String initStr = getString(INIT_SQLSERVER_ALL_FILE_PATH);
+        executeSql(initStr);
     }
 
     /**
      * 获取下载的文件名
      *
      * @param fileNameSuffix 文件名后缀
-     * @return
+     * @return 文件名
      */
     private String getOutputFileName(String fileNameSuffix) {
-        return "" + getDateString() + "-" + fileNameSuffix;
+        return getDateString() + "-" + fileNameSuffix;
     }
 
     /**
@@ -214,8 +216,7 @@ TIMESTAMP'2021-12-12 16:58:36.277'
         List<String> listOfFileNames = new ArrayList<>();
         for (DELETE_SAVE_TYPE saveType :
                 DELETE_SAVE_TYPE.values()) {
-            for (int i = 0; i < lines.size(); i++) {
-                String rowText = lines.get(i);
+            for (String rowText : lines) {
                 RowBO rowBO = map.get(rowText);
                 newDeletes.add(getNewDeleteSql(rowBO));
                 //设置字段默认值
@@ -223,18 +224,18 @@ TIMESTAMP'2021-12-12 16:58:36.277'
                 String insertSql = getInsertSql(rowBO);
                 newInserts.add(insertSql);
             }
-            String saveText_d = getSaveText(newDeletes, lines, insertText);
-            String saveText_i = getSaveText(newInserts, lines, insertText);
+            String saveTextDelete = getSaveText(newDeletes, lines, insertText);
+            String saveTextInsert = getSaveText(newInserts, lines, insertText);
             StringBuilder builder = new StringBuilder();
-            if(contentPrefix != null && !contentPrefix.isEmpty()){
+            if (contentPrefix != null && !contentPrefix.isEmpty()) {
                 builder.append(contentPrefix).append(ROW_EXPR);
             }
             switch (exportType) {
                 case INIT_EXPORT:
-                    builder.append(saveText_i);
+                    builder.append(saveTextInsert);
                     break;
                 case DELETE_AND_INIT_EXPORT:
-                    builder.append(saveText_d).append(ROW_EXPR).append(saveText_i);
+                    builder.append(saveTextDelete).append(ROW_EXPR).append(saveTextInsert);
                     break;
                 default:
             }
@@ -251,22 +252,16 @@ TIMESTAMP'2021-12-12 16:58:36.277'
      * @param filename        导出的集合名称
      */
     public void downloadZipFile(HttpServletResponse response, List<String> listOfFileNames, String filename) {
-//        String filename = "download11111" + getDateString() + "-" + themeSetDto.getName() + ".zip";
-        System.out.println(filename);
+        logger.error(filename);
         response.setContentType("application/zip");
-//        response.setHeader("Content-Disposition", "attachment; filename=" + filename);
         try {
             response.setHeader("Content-Disposition", "attachment;filename*=UTF-8''" + URLEncoder.encode(filename, "UTF-8"));
         } catch (UnsupportedEncodingException e) {
             throw new RuntimeException(e);
         }
-//        response.setHeader("Content-Disposition", "attachment; filename=download11111" + ".zip");
         try (ZipOutputStream zipOutputStream = new ZipOutputStream(response.getOutputStream(), StandardCharsets.UTF_8)) {
             for (String fileName : listOfFileNames) {
                 FileSystemResource fileSystemResource = new FileSystemResource(fileName);
-
-//                FileSystemResource resource = new FileSystemResource(fileName);
-//                resource.setCharset(StandardCharsets.UTF_8);
 
                 ZipEntry zipEntry = new ZipEntry(fileSystemResource.getFilename());
                 zipEntry.setSize(fileSystemResource.contentLength());
@@ -328,50 +323,49 @@ TIMESTAMP'2021-12-12 16:58:36.277'
         if (!directory.exists()) {
             directory.mkdir();
         }
-        System.out.println("tempDirPath:" + tempDirPath);
+        logger.error("tempDirPath:{}", tempDirPath);
         return tempDirPath;
     }
 
     /**
      * 获取时间字符串
      *
-     * @return
+     * @return 返回日期类型字条串
      */
     private String getDateString() {
         LocalDateTime dateTimeObj = LocalDateTime.now();
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
-        String date = dateTimeObj.format(formatter);
-        return date;
+        return dateTimeObj.format(formatter);
     }
 
     /**
      * 处理字段值
      *
-     * @param dbtype    数据库类型
+     * @param dbType    数据库类型
      * @param rowBO     一行
      * @param adminInfo 默认数据
      */
-    private void setInsertValue(DELETE_SAVE_TYPE dbtype, RowBO rowBO, AdminInfo adminInfo) {
+    private void setInsertValue(DELETE_SAVE_TYPE dbType, RowBO rowBO, AdminInfo adminInfo) {
         for (int c = rowBO.getColumns().size() - 1; c >= 0; c--) {
             if (VALUE_NULL.equals(rowBO.getValues().get(c))) {
                 rowBO.getColumns().remove(c);
                 rowBO.getValues().remove(c);
                 continue;
             }
-            if (isDateTime(rowBO.getColumns().get(c), rowBO.getValues().get(c))) {
-                rowBO.getValues().set(c, getDateFunction(dbtype));
+            if (Boolean.TRUE.equals(isDateTime(rowBO.getColumns().get(c), rowBO.getValues().get(c)))) {
+                rowBO.getValues().set(c, getDateFunction(dbType));
             }
-            if (isCompany(rowBO.getColumns().get(c))) {
-                rowBO.getValues().set(c, adminInfo.getADMIN_COMPANY_ID());
+            if (Boolean.TRUE.equals(isCompany(rowBO.getColumns().get(c)))) {
+                rowBO.getValues().set(c, adminInfo.getAdminCompanyId());
             }
-            if (isDepartment(rowBO.getColumns().get(c))) {
-                rowBO.getValues().set(c, adminInfo.getADMIN_DEPARTMENT_ID());
+            if (Boolean.TRUE.equals(isDepartment(rowBO.getColumns().get(c)))) {
+                rowBO.getValues().set(c, adminInfo.getAdminDepartmentId());
             }
-            if (isPosition(rowBO.getColumns().get(c))) {
-                rowBO.getValues().set(c, adminInfo.getADMIN_POSITION_ID());
+            if (Boolean.TRUE.equals(isPosition(rowBO.getColumns().get(c)))) {
+                rowBO.getValues().set(c, adminInfo.getAdminPositionId());
             }
-            if (isStaff(rowBO.getColumns().get(c))) {
-                rowBO.getValues().set(c, adminInfo.getADMIN_STAFF_ID());
+            if (Boolean.TRUE.equals(isStaff(rowBO.getColumns().get(c)))) {
+                rowBO.getValues().set(c, adminInfo.getAdminStaffId());
             }
         }
     }
@@ -379,8 +373,8 @@ TIMESTAMP'2021-12-12 16:58:36.277'
     /**
      * 判断是否为员工
      *
-     * @param c
-     * @return
+     * @param c 数据库列名
+     * @return 该列是不是人员
      */
     private Boolean isStaff(String c) {
         return c.equalsIgnoreCase("MODIFY_STAFF_ID") | c.equalsIgnoreCase("CREATE_STAFF_ID") | c.equalsIgnoreCase("OWNER_STAFF_ID");
@@ -389,8 +383,8 @@ TIMESTAMP'2021-12-12 16:58:36.277'
     /**
      * 判断是否为岗位
      *
-     * @param c
-     * @return
+     * @param c 数据库列名
+     * @return 该列是不是岗位
      */
     private Boolean isPosition(String c) {
         return c.equalsIgnoreCase("OWNER_POSITION_ID") | c.equalsIgnoreCase("CREATE_POSITION_ID");
@@ -399,8 +393,8 @@ TIMESTAMP'2021-12-12 16:58:36.277'
     /**
      * 判断是否为部门
      *
-     * @param c
-     * @return
+     * @param c 数据库列名
+     * @return 该列是不是部门
      */
     private Boolean isDepartment(String c) {
         return c.equalsIgnoreCase("OWNER_DEPARTMENT_ID") | c.equalsIgnoreCase("CREATE_DEPARTMENT_ID");
@@ -409,8 +403,8 @@ TIMESTAMP'2021-12-12 16:58:36.277'
     /**
      * 当前列为公司
      *
-     * @param c
-     * @return
+     * @param c 数据库列名
+     * @return 该列是不是公司
      */
     private Boolean isCompany(String c) {
         return c.equalsIgnoreCase("CID");
@@ -419,12 +413,12 @@ TIMESTAMP'2021-12-12 16:58:36.277'
     /**
      * 获取时间值
      *
-     * @param dbtype
-     * @return
+     * @param dbType 数据库类型
+     * @return 返回数据库的时间函数
      */
-    private String getDateFunction(DELETE_SAVE_TYPE dbtype) {
+    private String getDateFunction(DELETE_SAVE_TYPE dbType) {
         String result = "";
-        switch (dbtype) {
+        switch (dbType) {
             case DELETE_AND_ORACLE:
                 result = "sysdate";
                 break;
@@ -443,9 +437,9 @@ TIMESTAMP'2021-12-12 16:58:36.277'
     /**
      * 判断是否是时间类型
      *
-     * @param c
-     * @param v
-     * @return
+     * @param c 数据库列名
+     * @param v 该列的值
+     * @return 该列是不是时间类型
      */
     private Boolean isDateTime(String c, String v) {
         if (v == null || v.isEmpty()) {
@@ -455,7 +449,7 @@ TIMESTAMP'2021-12-12 16:58:36.277'
             return true;
         }
         for (String pattern :
-                DATETIME_PATTERN) {
+                dateTimePattern) {
             boolean matches = Pattern.matches(pattern, v);
             if (matches) {
                 return true;
@@ -476,24 +470,24 @@ TIMESTAMP'2021-12-12 16:58:36.277'
     /**
      * 获取处理后要保存的文件
      *
-     * @param newSqls  处理后的文本
-     * @param inserts  处理前的文本
-     * @param sqltexts 原始输入文本
-     * @return
+     * @param newSql  处理后的文本
+     * @param inserts 处理前的文本
+     * @param sqlText 原始输入文本
+     * @return 获取替换后保存的字符
      */
-    private String getSaveText(List<String> newSqls, List<String> inserts, String sqltexts) {
+    private String getSaveText(List<String> newSql, List<String> inserts, String sqlText) {
         for (int i = 0; i < inserts.size(); i++) {
-            sqltexts = sqltexts.replace(inserts.get(i), newSqls.get(i));
+            sqlText = sqlText.replace(inserts.get(i), newSql.get(i));
         }
-        newSqls.clear();
-        return sqltexts;
+        newSql.clear();
+        return sqlText;
     }
 
     /**
      * 获取中间数据类型
      *
      * @param sqlText 一行语句
-     * @return
+     * @return 返回BO
      */
     private RowBO getRowBO(String sqlText) {
         TInsertSqlStatement insert = getSqlStatement(sqlText);
@@ -509,8 +503,8 @@ TIMESTAMP'2021-12-12 16:58:36.277'
     /**
      * 获取删除语句
      *
-     * @param rowBO
-     * @return
+     * @param rowBO BO实体
+     * @return 删除该行的语句
      */
     private String getNewDeleteSql(RowBO rowBO) {
         String id = getDeleteId(rowBO.getColumns(), rowBO.getValues());
@@ -520,8 +514,8 @@ TIMESTAMP'2021-12-12 16:58:36.277'
     /**
      * 获取插入语句
      *
-     * @param rowBO
-     * @return
+     * @param rowBO BO实体
+     * @return 返回要插入的语句
      */
     private String getInsertSql(RowBO rowBO) {
         return "INSERT INTO " + rowBO.getInsertSqlStatement().getTargetTable().getName() + "(" + String.join(",", rowBO.getColumns()) + ") VALUES(" + String.join(",", rowBO.getValues()) + ");";
@@ -530,37 +524,37 @@ TIMESTAMP'2021-12-12 16:58:36.277'
     /**
      * 获取值不为空的列和值
      *
-     * @param clist 过滤前的列
-     * @param vlist 过滤前的值
+     * @param cList 过滤前的列
+     * @param vList 过滤前的值
      */
-    private void getColumnValueSkipNull(List<String> clist, List<String> vlist) {
-        for (int i = clist.size() - 1; i >= 0; i--) {
-            String value = vlist.get(i);
+    private void getColumnValueSkipNull(List<String> cList, List<String> vList) {
+        for (int i = cList.size() - 1; i >= 0; i--) {
+            String value = vList.get(i);
             if (!"NULL".equals(value)) {
                 continue;
             }
-            clist.remove(i);
-            vlist.remove(i);
+            cList.remove(i);
+            vList.remove(i);
         }
     }
 
     /**
      * 获取主键Id
      *
-     * @param clist
-     * @param vlist
+     * @param cList
+     * @param vList
      * @return
      */
-    private String getDeleteId(List<String> clist, List<String> vlist) {
+    private String getDeleteId(List<String> cList, List<String> vList) {
         String id = "";
-        for (int i = 0; i < vlist.size(); i++) {
-            if (clist.get(i) == null) {
+        for (int i = 0; i < vList.size(); i++) {
+            if (cList.get(i) == null) {
                 continue;
             }
-            if (!clist.get(i).toLowerCase().equals("id")) {
+            if (!cList.get(i).equalsIgnoreCase("id")) {
                 continue;
             }
-            id = vlist.get(i);
+            id = vList.get(i);
             break;
         }
         return id;
@@ -569,15 +563,13 @@ TIMESTAMP'2021-12-12 16:58:36.277'
     /**
      * 获取值列表并验证数量相同
      *
-     * @param insert
-     * @param clist
-     * @param vlist
-     * @return
+     * @param insert    要插入的一行
+     * @param cList     列数组
+     * @param vList     值数组
      */
-    private boolean getValueListAndAssert(TInsertSqlStatement insert, List<String> clist, List<String> vlist) {
-        getValueList(insert, vlist);
-        Assert.isTrue(clist.size() == vlist.size(), "列的数量和值的数据不一致");
-        return true;
+    private void getValueListAndAssert(TInsertSqlStatement insert, List<String> cList, List<String> vList) {
+        getValueList(insert, vList);
+        Assert.isTrue(cList.size() == vList.size(), "列的数量和值的数据不一致");
     }
 
     /**
@@ -612,16 +604,15 @@ TIMESTAMP'2021-12-12 16:58:36.277'
     /**
      * 匹配SQL
      *
-     * @param sqlText
-     * @return
+     * @param sqlText    sql语句
+     * @return           返回插入对象
      */
     private TInsertSqlStatement getSqlStatement(String sqlText) {
         TGSqlParser sqlParser = new TGSqlParser(EDbVendor.dbvmssql);
         sqlParser.sqltext = sqlText;
         sqlParser.parse();
 
-        TInsertSqlStatement insert = (TInsertSqlStatement) sqlParser.sqlstatements.get(0);
-        return insert;
+        return (TInsertSqlStatement) sqlParser.sqlstatements.get(0);
     }
 
     /**
@@ -698,24 +689,19 @@ TIMESTAMP'2021-12-12 16:58:36.277'
     /**
      * 创建视图
      *
-     * @param init_s
+     * @param initStr 插入数据库语句
      */
-    private void executeSql(String init_s) {
-        String[] split = init_s.split("\n");
-        String newsql = "";
+    private void executeSql(String initStr) {
+        String[] split = initStr.split("\n");
+        StringBuilder builder = new StringBuilder();
         for (String sqlLine :
                 split) {
-            newsql += sqlLine;
-            if (!endWithSqlComma(sqlLine)) {
+            builder.append(sqlLine);
+            if (Boolean.FALSE.equals(endWithSqlComma(sqlLine))) {
                 continue;
             }
-            jdbcTemplate.execute(newsql);
-            newsql = "";
-            try {
-
-            } catch (Exception e) {
-                logger.error(e.getMessage(), e);
-            }
+            jdbcTemplate.execute(builder.toString());
+            builder.delete(0, builder.length());
         }
     }
 
@@ -744,15 +730,12 @@ TIMESTAMP'2021-12-12 16:58:36.277'
      * 获取主题图和自定义专题图插入的SQL
      *
      * @param viewPrefixes 视图的前缀
-     * @return
+     * @return 获取指定表的插入语句
      */
     private String getTableInsertString(List<String> viewPrefixes) {
         List<String> bbAndCCViewNames = getViewNames(viewPrefixes);
         StringBuilder sb = new StringBuilder();
         for (String viewName : bbAndCCViewNames) {
-//            String querySql = "SELECT * FROM " + viewName;
-//            logger.error("querySql:");
-//            logger.error(querySql);
             List<Map<String, Object>> rows = jdbcTemplate.queryForList("SELECT * FROM " + viewName);
             for (Map<String, Object> row : rows) {
                 String tableName = row.getOrDefault("TABLE_NAME", viewName).toString();
@@ -786,7 +769,6 @@ TIMESTAMP'2021-12-12 16:58:36.277'
 
         String outputString = sb.toString();
         outputString = replaceViewPrefix(outputString);
-//        System.out.println(outputString);
         return outputString;
     }
 
@@ -809,11 +791,10 @@ TIMESTAMP'2021-12-12 16:58:36.277'
      * 查询数据库中BB_和CC_开头的视图
      *
      * @param viewPrefix 视图的前缀
-     * @return
+     * @return 返回指定前缀的表名
      */
     public List<String> getViewNames(List<String> viewPrefix) {
         Assert.notEmpty(viewPrefix, "tablePrefix is empty");
-//        String sql = "SELECT name FROM sys.objects WHERE type_desc='VIEW' AND (name LIKE 'BB_%' OR name LIKE 'CC_%')";
         String collect = viewPrefix.stream().map(v -> "name LIKE '" + v + "%'").collect(Collectors.joining(" OR "));
         String sql = String.format("SELECT name FROM sys.objects WHERE type_desc='VIEW' AND (%s)", collect);
         return jdbcTemplate.queryForList(sql, String.class);
@@ -822,8 +803,8 @@ TIMESTAMP'2021-12-12 16:58:36.277'
     /**
      * 转为string
      *
-     * @param value
-     * @return
+     * @param value 列值
+     * @return 转换为字符串
      */
     private static String formatValue(Object value) {
         if (value == null) {
